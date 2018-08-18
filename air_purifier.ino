@@ -9,11 +9,16 @@
  * MICRODUST SENSOR PINMAP
  * { 1: useless(cutted wire), 2(PM10): Digital 3, 3: 5V Pin, 4(PM25): unused, 5: GND }
  *  CO2 NDIR SENSOR POWER - V+: 5V, V-:GND
+ *  
+ *  
+ *  A0 - LCD Buttons
+ *  A3 - Motor Shield
+ *  D2 - Motor Shield
  */
 #define DHTPIN 2 // DHT sensor pin(Digital 2)
 #define         MG_PIN                       (A1)     //define which analog input channel you are going to use for co2 chemical sensor
-SoftwareSerial mySerial(A2, A3); // NDIR SENSOR PINS(TX, RX)
-#define MD_PIN 3 //Microdust sensor pin(Digital 3)
+SoftwareSerial mySerial(A4, A5); // NDIR SENSOR PINS(TX, RX)
+#define MD_PIN 12 //Microdust sensor pin(Digital 12)
 
 
 
@@ -87,8 +92,8 @@ int adc_key_in = 0;
 int viewType = 0;
 
 // Motor Shield
-int pwmPin = 3;
-int dirPin = 2;
+int pwmPin = 3; // Analog Pin 3
+int dirPin = 2; //Digital Pin 2
 
 static int iSpeed = 0;
 static int iAcc = 5;
