@@ -4,18 +4,25 @@
 #include <SoftwareSerial.h>
 #include <Wire.h>
 
-/**** DEFINE PINS ****/
+/**** 핀 안내 ****/
 /*
- * MICRODUST SENSOR PINMAP
- * { 1: useless(cutted wire), 2(PM10): Digital 3, 3: 5V Pin, 4(PM25): unused, 5: GND }
- *  CO2 NDIR SENSOR POWER - V+: 5V, V-:GND
+ * *************** 미세먼지 센서 선 연결 방법(왼쪽부터) ********************
+ * { 1: 쓸데없음(우리가 자른 선), 2(PM10): 디지털 12번 핀, 3: 5V 핀, 4(PM25): 사용 안함(만약 측정값이 이상한 경우 2번 선 대신 이 선을 디지털 12번에 꽂아도 좋음), 5: GND 핀 }
+ * ************** CO2 NDIR 센서 연결 방법(기판 오른쪽 핀 안내 참조) ******************
+ *  { T: 아날로그 4번 핀, R: 아날로그 5번 핀, V+: 5V 핀, V-: GND 핀 }
+ *  ************* CO2 화학식 센서 연결 방법 *******************
+ *  { 빨간 선: 5V 핀, 검은 선: GND 핀, 파란 선: 아날로그 1번 핀 }
+ *  ************* 온습도 센서 연결 방법 ***************
+ *  { 빨간 선: 5V 핀, 검은 선: GND 핀, 고동색 선: 디지털 11번 핀 }
  *  
+ *  ************* LCD 쉴드 **********
+ *  LCD 쉴드에 연결되어 있는 선을 아두이노위에 얹는다고 가정할 때 정확히 일치하는 곳에 연결하면 됨.
  *  
- *  A0 - LCD Buttons
- *  A3 - Motor Shield
- *  D2 - Motor Shield
+ *  ************* 절대 건드리지 말아야 할 핀!! ********
+ *  아날로그 3번 핀 - 모터 쉴드용
+ *  디지털 2번 핀 - 모터 쉴드용
  */
-#define DHTPIN 2 // DHT sensor pin(Digital 2)
+#define DHTPIN 11 // DHT sensor pin(Digital 11)
 #define         MG_PIN                       (A1)     //define which analog input channel you are going to use for co2 chemical sensor
 SoftwareSerial mySerial(A4, A5); // NDIR SENSOR PINS(TX, RX)
 #define MD_PIN 12 //Microdust sensor pin(Digital 12)
@@ -31,7 +38,7 @@ int humid = 0;
 
 /********************* CO2 Sensor (Chemical Way) **********************/
 /************************Hardware Related Macros************************************/
-#define         BOOL_PIN                     (12)
+#define         BOOL_PIN                     (13)
 #define         DC_GAIN                      (8.5)   //define the DC gain of amplifier
 
 /***********************Software Related Macros************************************/
@@ -41,7 +48,7 @@ int humid = 0;
 
 /**********************Application Related Macros**********************************/
 //These two values differ from sensor to sensor. user should derermine this value.
-#define         ZERO_POINT_VOLTAGE           (0.235) //define the output of the sensor in volts when the concentration of CO2 is 400PPM
+#define         ZERO_POINT_VOLTAGE           (0.258) // CO2 센서 보정 시 입력해야 하는 부분(자세한 내용은 아래 참조)
 #define         REACTION_VOLTGAE             (0.030) //define the voltage drop of the sensor when move the sensor from air into 1000ppm CO2
 
 /*****************************Globals***********************************************/
@@ -114,6 +121,9 @@ int last_dht_update = 0;
 
 void setup() {
   Serial.begin(9600);
+  /**** Motor Reset ****/
+  analogWrite(pwmPin, 0);
+  digitalWrite(dirPin, LOW);
   /**** CO2 Sensor(Chem) Register ****/
   pinMode(BOOL_PIN, INPUT);                        //set pin to input
   digitalWrite(BOOL_PIN, HIGH);                    //turn on pullup resistors
@@ -139,13 +149,6 @@ void setup() {
 void loop() {
   /** Collect Microdust samples and control motor by settings ***/
   collectSamples();
-  if (iSpeed >= 0) {
-    analogWrite(pwmPin, iSpeed);
-    digitalWrite(dirPin, LOW);
-  } else {
-    analogWrite(pwmPin, -iSpeed);
-    digitalWrite(dirPin, HIGH);
-  }
   /*
    * TIMED LOOPS
    */
@@ -155,6 +158,13 @@ void loop() {
     last_lcd_update = millis();
     buttonInput(readLCDButtons());
     //Serial.println("[LOG] LCD Updated.");
+    if (iSpeed >= 0) {
+      analogWrite(pwmPin, iSpeed);
+      digitalWrite(dirPin, LOW);
+    } else {
+      analogWrite(pwmPin, -iSpeed);
+      digitalWrite(dirPin, HIGH);
+    }
   }
   if((millis() - last_co2_chem_update) >= CO2_CHEM_UPDATE_TIMES) {
     volts = MGRead(MG_PIN);
@@ -294,6 +304,12 @@ void writeToLCD() {
       lcd.print(" ug/m3");
       break;
     case co2view:
+    /*
+     * CO2 센서 보정: 
+     * 1. 아래 두줄을 주석처리하고 밑에 주석처리된 볼트 부분의 주석을 해제
+     * 2. 전원을 연결(PC 전원이 아닌 일반 전원) 하고 볼트 부분의 숫자 기억(x.xx 형태)
+     * 3. 해당 숫자에 8.5를 나눠 위쪽의 부분에 소숫점 3자리까지 입력(0.xxx 형태)
+     */
       lcd.print("Chem. ");
       lcd.print(getChemPPM());
       lcd.print(" ppm");
