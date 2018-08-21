@@ -306,13 +306,18 @@ void writeToLCD() {
     case co2view:
     /*
      * CO2 센서 보정: 
-     * 1. 아래 두줄을 주석처리하고 밑에 주석처리된 볼트 부분의 주석을 해제
+     * 1. 아래 세줄을 주석처리하고 밑에 주석처리된 볼트 부분의 주석을 해제
      * 2. 전원을 연결(PC 전원이 아닌 일반 전원) 하고 볼트 부분의 숫자 기억(x.xx 형태)
      * 3. 해당 숫자에 8.5를 나눠 위쪽의 부분에 소숫점 3자리까지 입력(0.xxx 형태)
      */
       lcd.print("Chem. ");
       lcd.print(getChemPPM());
       lcd.print(" ppm");
+      /*
+      lcd.print("Volt: ");
+      lcd.print(volts);
+      lcd.print(" V");
+      */
       lcd.setCursor(0, 1);
       lcd.print("NDIR: ");
       lcd.print(getNDIRPPM());
