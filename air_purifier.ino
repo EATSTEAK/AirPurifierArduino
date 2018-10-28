@@ -1,4 +1,5 @@
 #include <string.h>
+#include <LiquidCrystal.h>
 #include <DHT.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -211,16 +212,6 @@ void controlMotor(int level) {
   } else if(iSpeed < 0) {
     iSpeed = 0;
   }
-  resetLCD();
-  lcd.print("Speed Changed:");
-  lcd.setCursor(0, 1);
-  if(level > 0) {
-    lcd.print("+");
-    lcd.print(level);
-  } else {
-    lcd.print(level);
-  }
-  delay(200);
 }
 
 
