@@ -1,5 +1,4 @@
 #include <string.h>
-#include <LiquidCrystal.h>
 #include <DHT.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -77,27 +76,6 @@ float ugm3 = 0;  //세제곱미터(큐빅 미터)당 마이크로 그램(㎍/㎥
 int i = 0;
 int dht_sw = 0;
 int air_sw = 0;
-
-
-/**** LCD AND BUTTONS ****/
-LiquidCrystal lcd(8, 9, 4, 5, 6, 7);
-int adc_key_in = 0;
-
-#define btr 0
-#define btu 1
-#define btd 2
-#define btl 3
-#define bts 4
-#define btn 5
-
-// LCD Modes
-#define motorview 0
-#define dhtview 1
-#define mdview 2
-#define co2view 3
-
-int viewType = 0;
-
 // Motor Shield
 int pwmPin = 3; // Analog Pin 3
 int dirPin = 2; //Digital Pin 2
@@ -137,13 +115,7 @@ void setup() {
   last_co2_chem_update = millis() - CO2_CHEM_UPDATE_TIMES;
   last_dht_update = millis() - DHT_UPDATE_TIMES;
   /**** LCD Register ****/
-  resetLCD();
-  lcd.print("Starting...");
-  lcd.setCursor(0, 1);
-  lcd.print("-- Air Purifier --");
-  Serial.println("Air Purifier Serial Connection Established.");
-  delay(2000);
-  Serial.println("Wait for Input...");
+  Serial.println("ready");
 }
 
 void loop() {
@@ -153,11 +125,6 @@ void loop() {
    * TIMED LOOPS
    */
   if((millis() - last_lcd_update) >= LCD_UPDATE_TIMES) {
-    resetLCD();
-    writeToLCD();
-    last_lcd_update = millis();
-    buttonInput(readLCDButtons());
-    //Serial.println("[LOG] LCD Updated.");
     if (iSpeed >= 0) {
       analogWrite(pwmPin, iSpeed);
       digitalWrite(dirPin, LOW);
@@ -200,6 +167,17 @@ void loop() {
   if((millis() - last_dht_update) >= DHT_UPDATE_TIMES) {
     temp = dht.readTemperature();
     humid = dht.readHumidity();
+    /* Send Infomations */
+    Serial.print(getNDIRPPM());
+    Serial.print(" ");
+    Serial.print(getChemPPM());
+    Serial.print(" ");
+    Serial.print(getDustInfo());
+    Serial.print(" ");
+    Serial.print(temp);
+    Serial.print(" ");
+    Serial.print(humid);
+    Serial.print("\n");
   }
   /*
    * SERIAL CONNECTION
@@ -213,125 +191,17 @@ void loop() {
     Serial.print(data);
     Serial.print("\n");
     */
-    if(command == "getdata") {
-      if(data == "co2ndir") {
-          Serial.println(getNDIRPPM());
-      } else if(data == "co2chem") {
-          Serial.println(getChemPPM());
-      } else if(data == "microdust") {
-          Serial.println(getDustInfo());
-      } else if(data == "temp") {
-          Serial.println(temp);
-      } else if(data == "humid") {
-          Serial.println(humid);
-      } else if(data == "speed") {
-        Serial.println(iSpeed);
-      }
-    } else if(command == "setmotorspeed") {
+    if(command == "setmotorspeed") {
       int serialSpeed = data.toInt();
       if(serialSpeed > 255 || serialSpeed < 0) {
-        Serial.println("Invaild Value! Speed must be between 0 to 255."); 
+        Serial.println("false"); 
       } else {
         iSpeed = serialSpeed;
-        Serial.println("Speed Changed!");
+        Serial.println("true");
       }
     }
    }
 }
-
-/**** BUTTON RELATED FUNCTIONS ****/
-
-void buttonInput(int ctrlType) {
-  if(viewType == motorview) {
-    switch(ctrlType) {
-      case btu:
-        controlMotor(iAcc);
-        break;
-      case btd:
-        controlMotor(-iAcc);
-        break;
-      case btr:
-        controlMotor((iAcc * 10));
-        break;
-      case btl:
-        controlMotor(-(iAcc * 10));
-        break;
-    }
-  }
-  if(ctrlType == bts) {
-    viewType += 1;
-    if(viewType > 3 || viewType < 0) {
-      viewType = 0;
-    }
-    resetLCD();
-    writeToLCD();
-  }
-}
-
-int readLCDButtons() {
-  adc_key_in = analogRead(0);
-
-  if (adc_key_in > 1000) return btn;
-  if (adc_key_in < 50)   return btr;
-  if (adc_key_in < 195)  return btu;
-  if (adc_key_in < 380)  return btd;
-  if (adc_key_in < 555)  return btl;
-  if (adc_key_in < 790)  return bts;
-  return btn;
-}
-
-/**** LCD RELATED FUNCTIONS ****/
-
-void writeToLCD() {
-  switch(viewType) {
-    case motorview:
-      lcd.print("Curr. Spd:");
-      lcd.setCursor(0, 1);
-      lcd.print(iSpeed);
-      break;
-    case dhtview:
-      lcd.print("Temp. ");
-      lcd.print(temp);
-      lcd.print(" C");
-      lcd.setCursor(0, 1);
-      lcd.print("Humid. ");
-      lcd.print(humid);
-      lcd.print("%");
-      break;
-    case mdview:
-      lcd.print("Dust:");
-      lcd.print(getDustInfo());
-      lcd.print(" ug/m3");
-      break;
-    case co2view:
-    /*
-     * CO2 센서 보정: 
-     * 1. 아래 세줄을 주석처리하고 밑에 주석처리된 볼트 부분의 주석을 해제
-     * 2. 전원을 연결(PC 전원이 아닌 일반 전원) 하고 볼트 부분의 숫자 기억(x.xx 형태)
-     * 3. 해당 숫자에 8.5를 나눠 위쪽의 부분에 소숫점 3자리까지 입력(0.xxx 형태)
-     */
-      lcd.print("Chem. ");
-      lcd.print(getChemPPM());
-      lcd.print(" ppm");
-      /*
-      lcd.print("Volt: ");
-      lcd.print(volts);
-      lcd.print(" V");
-      */
-      lcd.setCursor(0, 1);
-      lcd.print("NDIR: ");
-      lcd.print(getNDIRPPM());
-      lcd.print(" ppm");
-      break;
-  }
-}
-
-void resetLCD() {
-  lcd.begin(16, 2);
-  lcd.setCursor(0, 0);
-  lcd.clear();
-}
-
 /**** MOTOR RELATED FUNCTIONS ****/
 
 void controlMotor(int level) {
