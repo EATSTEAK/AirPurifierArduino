@@ -1,5 +1,4 @@
 #include <string.h>
-#include <LiquidCrystal.h>
 #include <DHT.h>
 #include <SoftwareSerial.h>
 #include <Wire.h>
@@ -306,11 +305,11 @@ void collectSamples() {
   }
 }
 
-String getDustInfo() {
+float getDustInfo() {
   if(concentration == 0) {
-    return "Waiting...";
+    return -1;
   } else {
-    return String(ugm3);
+    return ugm3;
   }
 }
 
